@@ -12,9 +12,8 @@
 - revise dhcpmessage request and discover messages templates
 
 -revise bitset size calculation... could be wrong
-(change bitsets to left is least sig bit for calculations then output bytes as right most sig)
+ (change bitsets to left is least sig bit for calculations then output bytes as right most sig)
 
--discover mac address not updating on table, causing subsequent dhcpnak when responding to dhcprequest
 
 -change assign ip to assign using bitset functions for efficency
 

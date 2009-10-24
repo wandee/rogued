@@ -121,12 +121,6 @@ public class DHCPClient {
 	public static  void broadcastPacket(byte[] payload) {
 		assert(payload.length <= MAX_BUFFER_SIZE);
 		String broadcastIP = "255.255.255.255";
-		try {
-			DatagramPacket p = new DatagramPacket(payload, payload.length, InetAddress.getByName(broadcastIP), serverPort);
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		sendPacket(payload,broadcastIP);
 	}
 	

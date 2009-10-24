@@ -1,6 +1,3 @@
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.util.Arrays;
 import java.util.BitSet;
 
 /**
@@ -12,11 +9,11 @@ import java.util.BitSet;
  *
  */
 public class DHCPMessage {
-	public static final int BOOTREQUEST = 1;
-	public static final int BOOTREPLY = 2;
-	public static final int DHCPREQUEST = 1;
-	public static final int DHCPREPLY = 2;
-	public static final int ETHERNET10MB = 1;
+	public static final byte BOOTREQUEST = 1;
+	public static final byte BOOTREPLY = 2;
+	public static final byte DHCPREQUEST = 1;
+	public static final byte DHCPREPLY = 2;
+	public static final byte ETHERNET10MB = 1;
 	//private static String NL = ;
 	public static final String NL = System.getProperty("line.separator");
 	
@@ -392,9 +389,9 @@ public class DHCPMessage {
 		msg[3] = this.hops;
 		
 		//add multibytes
-		for (int i=0; i < 4; i++) msg[4+i] = DHCPUtility.bits2Bytes(xid)[i];
-		for (int i=0; i < 2; i++) msg[8+i] = DHCPUtility.bits2Bytes(secs)[i];
-		for (int i=0; i < 2; i++) msg[10+i] = DHCPUtility.bits2Bytes(flags)[i];
+		for (int i=0; i < 4; i++) msg[4+i] = DHCPUtility.bits2Bytes(xid,4)[i];
+		for (int i=0; i < 2; i++) msg[8+i] = DHCPUtility.bits2Bytes(secs,2)[i];
+		for (int i=0; i < 2; i++) msg[10+i] = DHCPUtility.bits2Bytes(flags,2)[i];
 		for (int i=0; i < 4; i++) msg[12+i] = cIAddr[i];
 		for (int i=0; i < 4; i++) msg[16+i] = yIAddr[i];
 		for (int i=0; i < 4; i++) msg[20+i] = sIAddr[i];
@@ -570,8 +567,18 @@ public class DHCPMessage {
 		row[1] = "xid: " + DHCPUtility.printBitSet(xid);
 
 		row[2] = " secs: " +DHCPUtility.printBitSet(secs) + " | flags: ";
-		row[2] += DHCPUtility.printBitSet(flags);
-
+		//format flags
+		if (flags.cardinality() > 1) {
+			row[2] += flags + DHCPUtility.printBitSet(flags);
+		} else {
+			row[2] += DHCPUtility.printBitSet(flags);
+			if (flags.get(0)) {
+				row[2] += " (BROADCAST)";
+			} else {
+				row[2] += " (UNICAST)";
+			}
+		}
+		
 		row[3] = "cIAddr: " + DHCPUtility.printIP(cIAddr);
 		row[4] = "yIAddr: " + DHCPUtility.printIP(yIAddr);
 		row[5] = "sIAddr: " + DHCPUtility.printIP(sIAddr);

@@ -1,6 +1,5 @@
 import java.util.Arrays;
 import java.util.Hashtable;
-import java.util.LinkedList;
 
 /**
  * This class represents a hash table of options for a DHCP message. Its purpose
@@ -30,9 +29,13 @@ public class DHCPOptions {
 	public static final int DHCPSERVERIDENTIFIER = 54;
 	public static final int DHCPPARAMREQLIST = 55;
 	public static final int DHCPLEASETIME = 51;
+	public static final int DHCPMAXMSGSIZE = 57;
+	public static final int DHCPRENEWT1TIME = 58;
+	public static final int DHCPRELEASET2TIME = 59;
 	public static final int DHCPCLIENTIDENTIFIER = 61;
 
 	private static final int MAX_OPTION_SIZE = 320;
+	
 	
 	
 
@@ -81,9 +84,9 @@ public class DHCPOptions {
 		String output = new String("");
 		if (options.get(optionID) != null) {
 			byte[] option = options.get(optionID);
-		    if (optionID == DHCPHOSTNAME) {
-		    	output = DHCPUtility.printString(option).substring(2);
-		    } else if (optionID == DHCPREQUESTIP || optionID == DHCPROUTER || optionID == DHCPSUBNETMASK) {
+			if (optionID == DHCPHOSTNAME) {
+		    		output = DHCPUtility.printString(option,2);
+		    } else if (optionID == DHCPREQUESTIP || optionID == DHCPROUTER || optionID == DHCPSUBNETMASK || optionID == DHCPDNS) {
 				output = DHCPUtility.printIP(option[2], option[3], option[4],
 						option[5]);
 			} else if (optionID == DHCPMESSAGETYPE) {
@@ -95,15 +98,17 @@ public class DHCPOptions {
 				if (option[1] == 7 && option[2] == DHCPMessage.ETHERNET10MB) {
 					output = DHCPUtility.printMAC(option[3], option[4], option[5],option[6],option[7],option[8]);
 				} else if (option[2] == 0) {
-					output = DHCPUtility.printString(option).substring(2);
+					output = DHCPUtility.printString(option,2);
 				} else {
 					int head = (header ? 0 : 2);
 					for (int i = head; i < option.length; i++) {
 						output += option[i] + (i == option.length - 1 ? "" : ",");
 					}
 				}
-			} else if (optionID == DHCPLEASETIME) {
-				output = String.valueOf(DHCPUtility.bytestoint(new byte[]{option[2], option[3], option[4],option[5]}));
+			} else if (optionID == DHCPLEASETIME || optionID == DHCPRENEWT1TIME || optionID == DHCPRELEASET2TIME) {
+				output = DHCPUtility.printBitSet(DHCPUtility.bytes2Bits(new byte[]{option[2], option[3], option[4],option[5]})) + " secs";
+			} else if (optionID == DHCPMAXMSGSIZE) {
+				output = DHCPUtility.printBitSet(DHCPUtility.bytes2Bits(new byte[]{option[2], option[3]})) + " bytes";
 			} else {
 				int head = (header ? 0 : 2);
 				for (int i = head; i < option.length; i++) {
@@ -198,8 +203,8 @@ public class DHCPOptions {
 		// copy bytes
 		int bytes = 0;
 		for (int i = 4; i < totalBytes; i += bytes) {
-			for (int p = 0; p < 99999999; p++)
-				;
+			/*for (int p = 0; p < 99999999; p++)
+				;*/
 			//System.out.println("debug test1: iteration = " + i + " bytes = "
 			//		+ bytes + " totalBytes = " + totalBytes);
 			bytes = 1;
@@ -213,7 +218,7 @@ public class DHCPOptions {
 				byte[] option = new byte[optionLength];
 
 				// debug
-				assert optionLength >= 1 : "option length: " + optionLength;
+				assert optionLength >= 0 : "option length < 0: " + optionLength + " for option: " + options[i];
 
 				// for each option data byte
 				for (int j = 0; j < optionLength; j++) {

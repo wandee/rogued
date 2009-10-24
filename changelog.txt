@@ -1,0 +1,20 @@
+Beta 2
+Bug fixes:
+-lease time display correctly in dhcp table
+-bitset printing fixed (for xid, secs, flags, leases etc)
+-iphone allocation fixed
+-multiple discover ip allocation hog fixed
+-xid represented as long to avoid overflow
+-packets not from port 68 are dropped
+
+Improvements:
+-bitset implementation redesign
+-functions converting from bytes to int/short refactored to bitset equivalents
+-efficient redesign in the way assignable ip's are calculated
+
+Additions:
+-Server responds with DHCPACK to DHCPINFORM messages
+-respond to dhcp max message size option request
+-default lease time is user definable in config file
+
+Beta 1 - test release

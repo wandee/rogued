@@ -74,6 +74,7 @@ public class DHCPUtility {
 	
 	/**
 	 * Converts a byte array to a BitSet
+	 * Note: bitset format left (least sig bit) to right (most sig bit)
 	 * @param byteArray - the array of bytes to convert
 	 * @return the BitSet representation of a byte array
 	 */
@@ -85,7 +86,7 @@ public class DHCPUtility {
 			int temp = (byteArray[i] < 0 ? byteArray[i] + 256 : byteArray[i]);
 			for (int j=7; j >= 0; j--) {
 				if (temp - Math.pow(2,j) >= 0) {
-					bits.flip(i*8+7-j);
+					bits.flip((byteArray.length-1-i)*8+j);
 					/*System.out.println("flipping bit " + j + "(" 
 							+ Math.pow(2,j) +")"+ "from array element " + i
 							+ "(" + temp +")");*/
@@ -97,15 +98,47 @@ public class DHCPUtility {
 		return bits;
 	}
 	
+	/**
+	 * Converts a number to a BitSet
+	 * Note: bitset format left (least sig bit) to right (most sig bit)
+	 * @param num - the number to convert
+	 * @return the BitSet representation of the input number
+	 */
+	public static BitSet num2BitSet(Long num) {	
+		int size;
+		long temp = num;
+		boolean done = false;
+		for (size=0; !done; size++) {
+			if (temp-Math.pow(2,size) < 0) {
+				done = true;
+			}
+		}
+		BitSet bits = new BitSet(size);
+		
+		//long temp = num;
+		for (int j=size; j >= 0; j--) {
+			if (temp - Math.pow(2,j) >= 0) {
+				bits.flip(j);
+				/*System.out.println("flipping bit " + j + "(" 
+							+ Math.pow(2,j) +")"+ "from array element " + i
+							+ "(" + temp +")");*/
+				temp -= Math.pow(2,j);
+			}
+		}	
+
+		return bits;
+	}
+
 	
 	/**
 	 * Converts a BitSet to a ByteArray
+	 * Note: bitset format left (least sig bit) to right (most sig bit)
 	 * @param bitset - the bitset to convert to byte array
+	 * @param bytes - number of bytes to return
 	 * @return the ByteArray representation of the bitset
 	 */
-	public static byte[] bits2Bytes(BitSet bs) {
-		//possible error in size calculation...
-		byte[] ba = new byte[(int) Math.ceil(bs.size()/16)];
+	public static byte[] bits2Bytes(BitSet bs, int bytes) {
+		byte[] ba = new byte[bytes];
 		
 		//System.out.println(bs);
 		//System.out.println(ba.length + " bytes representation");
@@ -115,11 +148,14 @@ public class DHCPUtility {
 			BitSet octet = bs.get(i*8, i*8+7+1);
 			byte temp = 0;
 			for (int j = octet.nextSetBit(0); j >=0; j = octet.nextSetBit(j+1)) {
-				temp += Math.pow(2, 7-j);
+				temp += Math.pow(2, j);
 			}
-			//System.out.println(temp + " | " + octet.toString() + " " + octet.size()/2);
-			ba[i] = temp;
+			//System.out.println(temp + " | " + octet.toString());
+			ba[ba.length -1- i] = temp;
 		} 
+		/*for (int k=0; k < ba.length; k++) {
+			System.out.println("byte " + k + ": "+ ba[k]);
+		}*/
 		return ba;
 	}
 	
@@ -129,6 +165,7 @@ public class DHCPUtility {
 		return str;
 	}
 
+	/*
 	//only works for 4 bytes
 	public static byte[] inttobytes(int i){
 		byte[] dword = new byte[4];
@@ -156,6 +193,8 @@ public class DHCPUtility {
 		b[1] = (byte) (i & 0x00FF);
 		return b;
 	}
+	*/
+
 
 	/**
 	 * Converts the first 4 byte values of a byte array to an ip string.
@@ -182,8 +221,11 @@ public class DHCPUtility {
 	}
 
 	public static String printString(byte[] ba) {
+		return printString(ba,0);
+	}
+	public static String printString(byte[] ba, int startIndex) {
 		String str = "";
-		for (int i=0; i < ba.length; i++) {
+		for (int i=startIndex; i < ba.length; i++) {
 			if (ba[i] != 0) {
 				str += (char) ba[i];
 			}
@@ -241,12 +283,31 @@ public class DHCPUtility {
 		return baIP;
 	}
 	
+	public static Long strToLong(String str) {
+		Long num = null;
+		Pattern regex =  Pattern.compile(".*?(\\d+).*");
+		Matcher m = regex.matcher(str);
+		if (m.matches()) {
+			num = Long.parseLong(m.group(1));
+		}
+		return num;	
+	}
 	
 
-	public static String printBitSet(BitSet xid) {
-		// TODO Auto-generated method stub
-		return null;
+	public static long BitSetToLong(BitSet bs) {
+		System.out.println(bs);
+		long temp = 0;
+		for (int j = bs.nextSetBit(0); j >=0; j = bs.nextSetBit(j+1)) {
+			temp += Math.pow(2, j);
+		}
+		return temp;
 	}
+	public static String printBitSet(BitSet bs) {
+		String str = Long.toString(BitSetToLong(bs));
+		System.out.println(str);
+		return str;
+	}
+	
 	
 	
 	
