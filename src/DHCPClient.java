@@ -1,5 +1,3 @@
-package DHCPService; 
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -12,7 +10,7 @@ import java.util.Arrays;
 
 public class DHCPClient {
 	private static final int MAX_BUFFER_SIZE = 1024; // 1024 bytes
-	private static int listenPort =  1337; //68;
+	private static int listenPort =  68;
 	private static String serverIP = "127.0.0.1";
 	private static int serverPort =  67;
 	
@@ -22,20 +20,11 @@ public class DHCPClient {
 	
 	
 	
-	public DHCPClient(String IP) {
-		new DHCPClient(IP, serverPort);
-	}
-	
-	public DHCPClient(int port) {
-		new DHCPClient(serverIP, port);
-	}
-	
-	public DHCPClient(String IP, int port) {
-		serverIP = IP;
-		serverPort = port;
-		new DHCPClient();
-	}
-	 
+
+	/*
+	 * public DHCPClient(int servePort) { listenPort = servePort; new
+	 * DHCPServer(); }
+	 */
 
 	public DHCPClient() {
 		System.out.println("Connecting to DHCPServer at " + serverIP + " on port " + serverPort + "...");
@@ -47,8 +36,8 @@ public class DHCPClient {
 			
 
 		} catch (SocketException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
-			System.out.println("cannot bind to port " + listenPort + " on localhost");
 		}
 
 	}
@@ -80,7 +69,6 @@ public class DHCPClient {
 	}
 
 	public static  void sendPacket(byte[] payload) {
-		assert(socket != null);
 		assert(payload.length <= MAX_BUFFER_SIZE);
 		
 			try {
@@ -124,74 +112,22 @@ public class DHCPClient {
 	/**
 	 * @param args
 	 */
-//	public static void main(String[] args) {
-//		DHCPClient client;
-//
-//		if (args.length >= 1) { 
-//			client = new DHCPClient(Integer.parseInt(args[0])); 
-//		} else {
-//			client = new DHCPClient();
-//			DHCPMessage msgTest = new DHCPMessage();
-//
-//			//msgTest.discoverMsg(getMacAddress());
-//			printMacAddress();
-//			//sendPacket(msgTest.externalize());
-//			msgTest.requestMsg(getMacAddress(), new byte[]{(byte)192,(byte)168,1,9});
-//			sendPacket(msgTest.externalize());
-//		}
-//
-//	}
-	
-	public static byte[] getMacAddress() {
-		byte[] mac = null;
-		try {
-			InetAddress address = InetAddress.getLocalHost();
+	public static void main(String[] args) {
+		DHCPClient client;
+		/*
+		 * if (args.length >= 1) { server = new
+		 * DHCPClient(Integer.parseInt(args[0])); } else {
+		 */
+		client = new DHCPClient();
+	    DHCPMessage msgTest = new DHCPMessage();
+		//msgTest.discoverMsg(getMacAddress());
+		DHCPUtility.printMacAddress();
+		//sendPacket(msgTest.externalize());
+		msgTest.requestMsg(DHCPUtility.getMacAddress(), new byte[]{(byte)192,(byte)168,1,9});
+		sendPacket(msgTest.externalize());
+		// }
 
-			/*
-			 * Get NetworkInterface for the current host and then read the
-			 * hardware address.
-			 */
-			NetworkInterface ni = NetworkInterface.getByInetAddress(address);
-			mac = ni.getHardwareAddress();
-
-			
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		} catch (SocketException e) {
-			e.printStackTrace();
-		}
-		assert(mac != null);
-		return mac;
 	}
 	
-	public static void printMacAddress() {
-		try {
-			InetAddress address = InetAddress.getLocalHost();
-
-			/*
-			 * Get NetworkInterface for the current host and then read the
-			 * hardware address.
-			 */
-			NetworkInterface ni = NetworkInterface.getByInetAddress(address);
-			byte[] mac = ni.getHardwareAddress();
-
-			System.out.print("Hardware Address for current adapter: ");
-			
-			/*
-			 * Extract each array of mac address and convert it to hexa with the
-			 * . * following format 08-00-27-DC-4A-9E.
-			 */
-			for (int i = 0; i < mac.length; i++) {
-				System.out.format("%02X%s", mac[i], (i < mac.length - 1) ? "-"
-						: "");
-			}
-			
-			System.out.print("\n");
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		} catch (SocketException e) {
-			e.printStackTrace();
-		}
-	}
-
+	
 }

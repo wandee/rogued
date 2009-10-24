@@ -1,4 +1,3 @@
-package DHCPService;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.util.Arrays;
@@ -17,6 +16,9 @@ public class DHCPMessage {
 	public static final int DHCPREQUEST = 1;
 	public static final int DHCPREPLY = 2;
 	public static final int ETHERNET10MB = 1;
+	//private static String NL = ;
+	public static final String NL = System.getProperty("line.separator");
+	
 	
 	//Operation Code:
 	//Specifies the general type of message
@@ -83,7 +85,7 @@ public class DHCPMessage {
 		sName = new byte[64];
 		file = new byte[128];
 		options = new DHCPOptions();
-
+		//NL = System.getProperty("line.seperator");
 	}
 	
 	public DHCPMessage(byte[] msg) {
@@ -137,12 +139,12 @@ public class DHCPMessage {
 		return this.externalize();
 	}
 	
-	public byte[] offerMsg(byte[] cMacAddress, byte[] offerIP) {
+	public byte[] offerMsg(int xid, byte[] cMacAddress, byte[] offerIP) {
 		op = DHCPREPLY;
 		hType = ETHERNET10MB; // (0x1) 10Mb Ethernet
 		hLen = 6; // (0x6)
 		hops = 0; // (0x0)
-		xid = 556223005; // (0x21274A1D)
+		this.xid =  xid; //556223005; // (0x21274A1D)
 		secs = 0;  // (0x0)
 		flags = 0; // (0x0)
 		// DHCP: 0............... = No Broadcast
@@ -250,12 +252,12 @@ public class DHCPMessage {
 		return this.externalize();
 	}
 	
-	public byte[] ackMsg(byte[] cMacAddress, byte[] offerIP) {
+	public byte[] ackMsg(int xid, byte[] cMacAddress, byte[] offerIP) {
 		op = DHCPREPLY;
 		hType = ETHERNET10MB; // (0x1) 10Mb Ethernet
 		hLen = 6; // (0x6)
 		hops = 0; // (0x0)
-		xid = 556223005; // (0x21274A1D)
+		this.xid =  xid; // 556223005; // (0x21274A1D)
 		secs = 0;  // (0x0)
 		flags = 0; // (0x0)
 		// DHCP: 0............... = No Broadcast
@@ -322,9 +324,9 @@ public class DHCPMessage {
 		hLen = msg[2];  //1 byte
 		hops = msg[3];  //1 byte
 	
-		xid = bytestoint(new byte[]{msg[4],msg[5],msg[6],msg[7]});  	//4 byte int
-		secs = (short)  bytestoint(new byte[]{msg[8],msg[9]});          //2 byte short
-		flags =(short)  bytestoint(new byte[]{msg[10],msg[11]});        //2 byte int
+		xid = DHCPUtility.bytestoint(new byte[]{msg[4],msg[5],msg[6],msg[7]});  	//4 byte int
+		secs = (short)  DHCPUtility.bytestoint(new byte[]{msg[8],msg[9]});          //2 byte short
+		flags =(short)  DHCPUtility.bytestoint(new byte[]{msg[10],msg[11]});        //2 byte int
 		// note: only first bit used for flags 
 		// DHCP: 0............... = No Broadcast
 		// DHCP: 1............... = Broadcast
@@ -360,7 +362,7 @@ public class DHCPMessage {
 			this.options.internalize(options);
 		}
 		
-		this.printMessage();
+		//this.printMessage();
 	}
 	
 	
@@ -383,9 +385,9 @@ public class DHCPMessage {
 		msg[3] = this.hops;
 		
 		//add multibytes
-		for (int i=0; i < 4; i++) msg[4+i] = inttobytes(xid)[i];
-		for (int i=0; i < 2; i++) msg[8+i] = shorttobytes(secs)[i];
-		for (int i=0; i < 2; i++) msg[10+i] = shorttobytes(flags)[i];
+		for (int i=0; i < 4; i++) msg[4+i] = DHCPUtility.inttobytes(xid)[i];
+		for (int i=0; i < 2; i++) msg[8+i] = DHCPUtility.shorttobytes(secs)[i];
+		for (int i=0; i < 2; i++) msg[10+i] = DHCPUtility.shorttobytes(flags)[i];
 		for (int i=0; i < 4; i++) msg[12+i] = cIAddr[i];
 		for (int i=0; i < 4; i++) msg[16+i] = yIAddr[i];
 		for (int i=0; i < 4; i++) msg[20+i] = sIAddr[i];
@@ -492,10 +494,26 @@ public class DHCPMessage {
 		return cHAddr;
 	}
 
+	public String printCHAddr() {
+		String str = "";
+		//10mb ethernet?
+		if (hType == ETHERNET10MB) {
+			str += DHCPUtility.printMAC(cHAddr);
+		} else {
+			for (int i=0; i < cHAddr.length; i++) {
+				str += cHAddr[i] + (i == cHAddr.length -1 ? "" : ",");
+			}
+		}
+		return str;
+	}
+	
 	public void setCHAddr(byte[] addr) {
 		cHAddr = addr;
 	}
 
+	public String printSName() {
+		return DHCPUtility.printString(sName);
+	}
 	public byte[] getSName() {
 		return sName;
 	}
@@ -504,6 +522,9 @@ public class DHCPMessage {
 		sName = name;
 	}
 
+	public String printFile() {
+		return DHCPUtility.printString(file);
+	}
 	public byte[] getFile() {
 		return file;
 	}
@@ -537,97 +558,83 @@ public class DHCPMessage {
 
 		row[1] = "xid: " + Integer.toString(xid);
 
-		row[2] = "secs: " + Short.toString(secs) + " | flags: ";
+		row[2] = " secs: " + Short.toString(secs) + " | flags: ";
 		row[2] += Short.toString(flags);
 
-		row[3] = "cIAddr: " + cIAddr[0] + "." + cIAddr[1] + "." + cIAddr[2] +  "." + cIAddr[3];
-		row[4] = "yIAddr: " + yIAddr[0]  + "."  + yIAddr[1]  + "."  + yIAddr[2]  + "."  + yIAddr[3];
-		row[5] = "sIAddr: " + sIAddr[0]  + "." + sIAddr[1]  + "." + sIAddr[2]  + "." + sIAddr[3];
-		row[6] = "gIAddr: " + gIAddr[0]  + "." + gIAddr[1] + "."  + gIAddr[2]  + "." + gIAddr[3];
-		
+		row[3] = "cIAddr: " + DHCPUtility.printIP(cIAddr);
+		row[4] = "yIAddr: " + DHCPUtility.printIP(yIAddr);
+		row[5] = "sIAddr: " + DHCPUtility.printIP(sIAddr);
+		row[6] = "gIAddr: " + DHCPUtility.printIP(gIAddr);
+				
 		//get length of longest static dhcp format row
 		int width = 0;
 		for (int i = 0; i < row.length-3; i++) {
 			if (row[i].length() > width)
 				width = row[i].length();
 		}
-		
-		int length = 0;
-		row[7] = "cHAddr: " + cHAddr[0];
-		for (int i=1; i < hLen && i < cHAddr.length; i++) {
-			if (length > width) {
-				row[7] += "||\n|| " + cHAddr[i];
-				length = 6 + 3;
-			} else {
-				row[7] += ", " + cHAddr[i];
-			}
 			
+		//format chAddr
+		if (width < hLen || width < cHAddr.length) {
+			int length = 0;
+			row[7] = "cHAddr: " + cHAddr[0];
+			for (int i=1; i < hLen && i < cHAddr.length; i++) {
+				if (length > width) {
+					row[7] += "||" + NL + "|| " + cHAddr[i];
+					length = 6 + 3;
+				} else {
+					row[7] += ", " + cHAddr[i];
+				}
+
+			}
+		} else {
+			row[7] = "cHAddr: " + printCHAddr();
 		}
 		
-		length =0;
-		row[8] = "sName: " + sName[0];
-		for (int i=1; i < sName.length; i++) {
+		
+		
+		int length =0;
+		String sname = printSName();
+		row[8] = "sName: ";
+		for (int i=0; i < sname.length(); i++) {
 			if (length >  width) {
-				row[8] += "||\n|| " + sName[i];
+				row[8] += "||" + NL +"|| " + sname.charAt(i);
 				length = 6 + 3;
 			} else {
-				row[8] += ", " + sName[i];
+				row[8] += sname.charAt(i);
+				length++;
 			}
 		}
 		
-		row[9] = "file: " + file[0];
-		for (int i=1; i < file.length; i++) {
-			if (i*3 % width == 0) row[9] += "||\n|| " + file[i];
-			row[9] += ", " + file[i];
-		}
+		row[9] = " file: " + printFile();
+		/*
+		String file = printFile();
+		for (int i=0; i < file.length(); i++) {
+			if (i*3 % width == 0) row[9] += "||" + NL +"|| " + (char) file.charAt(i);
+			row[9] += file.charAt(i);
+		}*/
 		
 
 		String msgDivider = new String("");
 		for (int i = 0; i < width+6; i++) msgDivider += "=";
-		msgDivider += "\n";
+		msgDivider += NL;
 		
 		String rowDivider = new String("");
 		for (int i = 0; i < width+6; i++) rowDivider += "-";
-		rowDivider += "\n";
+		rowDivider += NL;
 
-		msg += msgDivider + "|| " + row[0] + " ||\n";
+		msg += msgDivider + "|| " + row[0] + " ||" + NL +"";
 		for (int i = 1; i < row.length; i++) {
 			int halfWhiteSpace = (width - row[i].length()) / 2;
 			String halfWhite = new String("");
 			for (int j=0; j < halfWhiteSpace; j++) halfWhite += " ";
-			msg += rowDivider + "|| " + halfWhite + row[i] + halfWhite + " ||\n";
+			msg += rowDivider + "|| " + halfWhite + row[i] + halfWhite + " ||" + NL;
 		}
 		msg += msgDivider + options.toString() + msgDivider;
 
 		return msg;
 	}
 	
-	//only works for 4 bytes
-	private byte[] inttobytes(int i){
-		byte[] dword = new byte[4];
-		dword[0] = (byte) ((i >> 24) & 0x000000FF);
-		dword[1] = (byte) ((i >> 16) & 0x000000FF);
-		dword[2] = (byte) ((i >> 8) & 0x000000FF);
-		dword[3] = (byte) (i & 0x00FF);
-		return dword;
-	}
 	
-	private int bytestoint(byte[] ba){
-		int integer = 0;
-		for (int i=0; i<ba.length; i++) {
-			System.out.printf("byte" + i + ": "+ ba[i] + " ");
-			integer += ba[i] * Math.pow(2, 8*i);
-		}
-		System.out.println("integer convesion: " + integer);
-		return integer;
-	}
-	
-	private byte[] shorttobytes(short i){
-		byte[] b = new byte[2];
-		b[0] = (byte) ((i >> 8) & 0x000000FF);
-		b[1] = (byte) (i & 0x00FF);
-		return b;
-	}
 	
 }
      
