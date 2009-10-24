@@ -35,9 +35,12 @@ public class DHCPServer {
 	
 	private ArrayList[] options = new ArrayList[4];
 
+	//DHCPServer Configuration information
 	private static byte[] subnet = new byte[4]; //192.168.1.0 
 	private static byte[] subnetMask = new byte[]{(byte) 255,(byte) 255,(byte) 255,0}; 
 	private static byte[] router = new byte[]{(byte) 192,(byte) 168,1,(byte)254};
+	private static byte[] dns = new byte[]{(byte) 192,(byte) 168,1,(byte) 106};
+	private static ArrayList<byte[]> exclusion = new ArrayList<byte[]>();
 	
 	//Table Data
 	private static byte[][] ipTable = new byte[254][4]; //0,255 reserved(1-254 assignable)
@@ -53,6 +56,7 @@ public class DHCPServer {
 	private static long defLeaseTime = 3600; //1 hour lease default
 	
 	private static String NL;
+	
 	
 	public DHCPServer(int servePort, String config) {
 		readConfigFile(config);
@@ -90,6 +94,22 @@ public class DHCPServer {
 		
 		//add network address to assigned ip's
 		addAssignedIP(subnet);
+		
+		//add server address to assigned ip's
+		try {
+			addAssignedIP(InetAddress.getLocalHost().getAddress());
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		//add dns address to assigned ip's
+		addAssignedIP(dns);
+		
+		//add exclude addresses to assigned ip's
+		for (byte[] ip : exclusion) {
+			addAssignedIP(ip);
+		}
 		
 		//calculate max number of assignable ip addresses for this subnet
 		BitSet subnetBits = DHCPUtility.bytes2Bits(DHCPServer.subnet);
@@ -250,8 +270,8 @@ public class DHCPServer {
 			} else if (msgType == DHCPOptions.DHCPRELEASE) {
 				//client relinquishing lease early
 				//possibly delete binding record of client?
-				System.out.println("DHCP Decline Message Received");
-				log("log.txt", "DHCPServer: DHCP Decline Message Received" + NL + request.toString());
+				System.out.println("DHCP Release Message Received");
+				log("log.txt", "DHCPServer: DHCP Release Message Received" + NL + request.toString());
 			} else {
 				System.out.println("Unknown DHCP Message Type: " + msgType);
 				log("log.txt", "DHCPServer: Unknown DHCP Message Type:" + msgType);
@@ -266,49 +286,74 @@ public class DHCPServer {
 
 		// compare request ip, to transaction offer ip, ensure it is still
 		// unique
-
-		/*byte[] ip = assignIP(request.getGIAddr());
-		addAssignedIP(ip);*/
 		int row = -1;
 		for (int i=0; i < macTable.length; i++) {
 			if (DHCPUtility.isEqual(request.getCHAddr(), macTable[i])) {
 				row = i;
 			}
 	    }	
-		assert(row >= 0) : "mac address not matching";
 		
-		/*if (request.getHType() == DHCPMessage.ETHERNET10MB) {
+		//assert(row >= 0) : "mac address not matching";
+		if (row >=0) { //transaction exists
+
+			/*if (request.getHType() == DHCPMessage.ETHERNET10MB) {
 			macTable[row] = request.getCHAddr();
 		} else {
 			assert (false) : "unimplemented";
 		}*/
 
-		hostNameTable[row] = new String("test").getBytes();
-		leaseStartTable[row] = System.currentTimeMillis();
-		leaseTimeTable[row] =  (int) defLeaseTime; //3600; // 1 hour least time
+			//use requesting clients hostname
+			if (request.getOptions().getOptionData(DHCPOptions.DHCPHOSTNAME) != null) {
+				hostNameTable[row] = request.getOptions().getOptionData(DHCPOptions.DHCPHOSTNAME);
+			} else {
+				hostNameTable[row] = new String("").getBytes();
+			}
+			
+			leaseStartTable[row] = System.currentTimeMillis();
+			leaseTimeTable[row] =  (int) defLeaseTime; //3600; // 1 hour least time
 
-		
-		// ip is now unique
-		// offer ip to requesting client
 
-		DHCPMessage ackMsg = new DHCPMessage(request.externalize());
-		System.out.println(request.getXid() + " " + DHCPUtility.printMAC(request.getCHAddr())+ " " + DHCPUtility.printMAC(macTable[row]) + " " + DHCPUtility.printIP(ipTable[row]));
+			// ip is now unique
+			// offer ip to requesting client
+
+			DHCPMessage ackMsg = new DHCPMessage(request.externalize());
+			System.out.println(request.getXid() + " " + DHCPUtility.printMAC(request.getCHAddr())+ " " + DHCPUtility.printMAC(macTable[row]) + " " + DHCPUtility.printIP(ipTable[row]));
+
+			ackMsg.setYIAddr(ipTable[row]);
+			DHCPOptions ackOptions = new DHCPOptions();
+			ackOptions.setOptionData(DHCPOptions.DHCPMESSAGETYPE, new byte[]{ DHCPOptions.DHCPACK});
+			try {
+				ackOptions.setOptionData(DHCPOptions.DHCPSERVERIDENTIFIER, InetAddress.getLocalHost().getAddress());
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			ackOptions.setOptionData(DHCPOptions.DHCPROUTER, router);
+			ackOptions.setOptionData(DHCPOptions.DHCPSUBNETMASK, subnetMask);
+			ackOptions.setOptionData(DHCPOptions.DHCPLEASETIME, DHCPUtility.inttobytes((int)defLeaseTime));
+			ackOptions.setOptionData(DHCPOptions.DHCPDNS , dns);
+
+			ackMsg.setOptions(ackOptions);
+			return ackMsg.externalize();
+		} else { //no transaction - optionally send a dhcpnak otherwise just ignore packet
+			DHCPMessage ackMsg = new DHCPMessage(request.externalize());
+			DHCPOptions ackOptions = new DHCPOptions();
+			ackOptions.setOptionData(DHCPOptions.DHCPMESSAGETYPE, new byte[]{ DHCPOptions.DHCPNAK});
+			try {
+				ackOptions.setOptionData(DHCPOptions.DHCPSERVERIDENTIFIER, InetAddress.getLocalHost().getAddress());
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			/*ackOptions.setOptionData(DHCPOptions.DHCPROUTER, router);
+			ackOptions.setOptionData(DHCPOptions.DHCPSUBNETMASK, subnetMask);
+			ackOptions.setOptionData(DHCPOptions.DHCPLEASETIME, DHCPUtility.inttobytes((int)defLeaseTime));
+			ackOptions.setOptionData(DHCPOptions.DHCPDNS , dns);*/
 		
-		ackMsg.setYIAddr(ipTable[row]);
-		DHCPOptions ackOptions = new DHCPOptions();
-		ackOptions.setOptionData(DHCPOptions.DHCPMESSAGETYPE, new byte[]{ DHCPOptions.DHCPACK});
-		try {
-			ackOptions.setOptionData(DHCPOptions.DHCPSERVERIDENTIFIER, InetAddress.getLocalHost().getAddress());
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		ackOptions.setOptionData(DHCPOptions.DHCPROUTER, router);
-		ackOptions.setOptionData(DHCPOptions.DHCPSUBNETMASK, subnetMask);
-		ackOptions.setOptionData(DHCPOptions.DHCPLEASETIME, DHCPUtility.inttobytes((int)defLeaseTime));
-		
-		ackMsg.setOptions(ackOptions);
-		return ackMsg.externalize();
+
+			ackMsg.setOptions(ackOptions);
+			return ackMsg.externalize();
+		}	
 	}
 
 	private static byte[] createOfferReply(DHCPMessage discover) {
@@ -386,15 +431,17 @@ public class DHCPServer {
 	
 	//add ip to list of assigned ips
 	private static void addAssignedIP(byte[] assignedIP) {
-		boolean done = false;
-		for (int i=0; i < ipTable.length && !done; i++) {
-			if (ipTable[i][0] == 0 && ipTable[i][1] == 0 &&
-				ipTable[i][2] == 0 && ipTable[i][3] == 0) {
+		if (isUnique(assignedIP)) { //no double entries
+			boolean done = false;
+			for (int i=0; i < ipTable.length && !done; i++) {
+				if (ipTable[i][0] == 0 && ipTable[i][1] == 0 &&
+						ipTable[i][2] == 0 && ipTable[i][3] == 0) {
 					ipTable[i] = assignedIP;
 					System.out.println("adding " + DHCPUtility.printIP(assignedIP) + " to table");
 					numAssigned++;
 					//showTable();
 					done = true;
+				}
 			}
 		}
 	}
@@ -413,6 +460,12 @@ public class DHCPServer {
 				} else if (line.trim().toUpperCase().startsWith("ROUTER")) {
 					byte[] ip =  DHCPUtility.strToIP(line);
 					if (ip != null) router = ip;
+				} else if (line.trim().toUpperCase().startsWith("DNS")) {
+					byte[] ip =  DHCPUtility.strToIP(line);
+					if (ip != null) dns = ip;
+				} else if (line.trim().toUpperCase().startsWith("EXCLUDE")) {
+					byte[] ip =  DHCPUtility.strToIP(line);
+					if (ip != null) exclusion.add(ip);
 				}
 				line = br.readLine();
 			}
@@ -503,10 +556,10 @@ public class DHCPServer {
 					ret =  new String(hostNameTable[row]);
 					break;
 				case 3:
-					ret =  leaseStartTable[row];
+					ret =  new Date(leaseStartTable[row]).toString();
 					break;
 				case 4:
-					ret =  leaseTimeTable[row];
+					ret =  new Date(leaseStartTable[row] + leaseTimeTable[row]).toString();
 					break;
 				}
 				//fire cell update event so table refreshes itself

@@ -107,8 +107,9 @@ public class DHCPUtility {
 		//possible error in size calculation...
 		byte[] ba = new byte[(int) Math.ceil(bs.size()/16)];
 		
-		System.out.println(bs);
-		System.out.println(ba.length + " bytes representation");
+		//System.out.println(bs);
+		//System.out.println(ba.length + " bytes representation");
+		
 		//for every byte 
 		for (int i=0; i < ba.length; i++) {
 			BitSet octet = bs.get(i*8, i*8+7+1);

@@ -23,6 +23,7 @@ public class DHCPOptions {
 	// DHCP Option Identifiers
 	public static final int DHCPSUBNETMASK = 1;
 	public static final int DHCPROUTER = 3;
+	public static final int DHCPDNS = 6;
 	public static final int DHCPHOSTNAME = 12;
 	public static final int DHCPREQUESTIP = 50;
 	public static final int DHCPMESSAGETYPE = 53;
@@ -32,6 +33,7 @@ public class DHCPOptions {
 	public static final int DHCPCLIENTIDENTIFIER = 61;
 
 	private static final int MAX_OPTION_SIZE = 320;
+	
 	
 
 	// private LinkedList<byte[]> options = new LinkedList<byte[]>();
@@ -56,10 +58,14 @@ public class DHCPOptions {
 
 	public byte[] getOptionData(int optionID) {
 		byte[] option = options.get(optionID);
-		byte[] optionData = new byte[option.length - 2];
-		for (int i = 0; i < optionData.length; i++)
-			optionData[i] = option[2 + i];
-		return optionData;
+		if (option != null) {
+			byte[] optionData = new byte[option.length - 2];
+			for (int i = 0; i < optionData.length; i++)
+				optionData[i] = option[2 + i];	
+			return optionData;
+		} else {
+			return null;
+		}
 	}
 
 	public void setOptionData(int optionID, byte[] optionData) {
