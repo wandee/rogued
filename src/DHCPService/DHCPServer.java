@@ -1,3 +1,4 @@
+package DHCPService;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -12,7 +13,7 @@ public class DHCPServer {
 	private static int listenPort = 67;
 	private static int clientPort = 68;
 	
-	private static DatagramSocket socket = null;
+	private  DatagramSocket socket = null;
 	
 	private ArrayList[] options = new ArrayList[4];
 
@@ -47,12 +48,14 @@ public class DHCPServer {
 		
 	}
 	
-	public static byte[] receivePacket() {
+	public  byte[] receivePacket() {
 		byte[] payload = new byte[MAX_BUFFER_SIZE];
 		int length = MAX_BUFFER_SIZE;
 		DatagramPacket p = new DatagramPacket(payload, length);
 		
 		try {
+			assert(socket != null);
+			assert(p != null);
 			socket.receive(p);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -66,7 +69,8 @@ public class DHCPServer {
 
 	}
 	
-	public static void sendPacket(String clientIP, byte[] payload) {
+	public  void sendPacket(String clientIP, byte[] payload) {
+		assert(socket != null);
 		assert(payload.length <= MAX_BUFFER_SIZE);
 	
 		try {
@@ -79,7 +83,7 @@ public class DHCPServer {
 		
 	}
 	
-	public static void broadcastPacket(byte[] payload) {
+	public  void broadcastPacket(byte[] payload) {
 		assert(payload.length <= MAX_BUFFER_SIZE);
 	
 		try {
@@ -96,6 +100,8 @@ public class DHCPServer {
 	/**
 	 * @param args
 	 */
+
+
 	public static void main(String[] args) {
 		DHCPServer server;
 		if (args.length >= 1) {
@@ -106,12 +112,13 @@ public class DHCPServer {
 		//server is always listening
 		boolean listening = true;
 		while (listening) {
-			byte[] packet = receivePacket();
-			process(packet);
+			byte[] packet = server.receivePacket();
+			server.process(packet);
 		}
 	}
-
-	private static void process(byte[] msg) {
+	
+	
+	private  void process(byte[] msg) {
 		DHCPMessage request = new DHCPMessage(msg);
 		byte msgType = request.getOptions().getOptionData(DHCPOptions.DHCPMESSAGETYPE)[0]; 
 		
