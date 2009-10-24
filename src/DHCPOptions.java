@@ -28,7 +28,7 @@ public class DHCPOptions {
 	public static final int DHCPMESSAGETYPE = 53;
 	public static final int DHCPSERVERIDENTIFIER = 54;
 	public static final int DHCPPARAMREQLIST = 55;
-	public static final int DHCPIPADDRLEASETIME = 51;
+	public static final int DHCPLEASETIME = 51;
 	public static final int DHCPCLIENTIDENTIFIER = 61;
 
 	private static final int MAX_OPTION_SIZE = 320;
@@ -77,7 +77,7 @@ public class DHCPOptions {
 			byte[] option = options.get(optionID);
 		    if (optionID == DHCPHOSTNAME) {
 		    	output = DHCPUtility.printString(option).substring(2);
-		    } else if (optionID == DHCPREQUESTIP) {
+		    } else if (optionID == DHCPREQUESTIP || optionID == DHCPROUTER || optionID == DHCPSUBNETMASK) {
 				output = DHCPUtility.printIP(option[2], option[3], option[4],
 						option[5]);
 			} else if (optionID == DHCPMESSAGETYPE) {
@@ -96,7 +96,8 @@ public class DHCPOptions {
 						output += option[i] + (i == option.length - 1 ? "" : ",");
 					}
 				}
-					
+			} else if (optionID == DHCPLEASETIME) {
+				output = String.valueOf(DHCPUtility.bytestoint(new byte[]{option[2], option[3], option[4],option[5]}));
 			} else {
 				int head = (header ? 0 : 2);
 				for (int i = head; i < option.length; i++) {

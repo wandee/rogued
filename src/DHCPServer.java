@@ -88,9 +88,10 @@ public class DHCPServer {
 		subnet[3] = (byte) (subnetMask[3] & router[3]);
 		System.out.println("sn & r = network addr: " + DHCPUtility.printIP(subnet));
 		
+		//add network address to assigned ip's
+		addAssignedIP(subnet);
+		
 		//calculate max number of assignable ip addresses for this subnet
-		
-		
 		BitSet subnetBits = DHCPUtility.bytes2Bits(DHCPServer.subnet);
 		boolean done = false;
 		int count = 32;
@@ -158,8 +159,12 @@ public class DHCPServer {
 			DatagramPacket p = new DatagramPacket(payload, payload.length, InetAddress.getByName(clientIP), clientPort);
 			System.out.println("Sending data: " + 
 					//Arrays.toString(p.getData()) + 
-					"to " + p.getAddress().toString());
+					"to " + p.getPort() + p.getAddress());
+			socket.send(p);
 		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -173,7 +178,11 @@ public class DHCPServer {
 			String broadcastIP = "255.255.255.255";
 			DatagramPacket p = new DatagramPacket(payload, payload.length, InetAddress.getByName(broadcastIP), clientPort);
 		    //System.out.println("Broadcasting data: " + Arrays.toString(p.getData()));
+			socket.send(p);
 		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -276,15 +285,29 @@ public class DHCPServer {
 
 		hostNameTable[row] = new String("test").getBytes();
 		leaseStartTable[row] = System.currentTimeMillis();
-		leaseTimeTable[row] = 3600; // 1 hour least time
+		leaseTimeTable[row] =  (int) defLeaseTime; //3600; // 1 hour least time
 
 		
 		// ip is now unique
 		// offer ip to requesting client
 
-		DHCPMessage ackMsg = new DHCPMessage();
+		DHCPMessage ackMsg = new DHCPMessage(request.externalize());
 		System.out.println(request.getXid() + " " + DHCPUtility.printMAC(request.getCHAddr())+ " " + DHCPUtility.printMAC(macTable[row]) + " " + DHCPUtility.printIP(ipTable[row]));
-		ackMsg.ackMsg(request.getXid(), request.getCHAddr(), ipTable[row]);
+		
+		ackMsg.setYIAddr(ipTable[row]);
+		DHCPOptions ackOptions = new DHCPOptions();
+		ackOptions.setOptionData(DHCPOptions.DHCPMESSAGETYPE, new byte[]{ DHCPOptions.DHCPACK});
+		try {
+			ackOptions.setOptionData(DHCPOptions.DHCPSERVERIDENTIFIER, InetAddress.getLocalHost().getAddress());
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		ackOptions.setOptionData(DHCPOptions.DHCPROUTER, router);
+		ackOptions.setOptionData(DHCPOptions.DHCPSUBNETMASK, subnetMask);
+		ackOptions.setOptionData(DHCPOptions.DHCPLEASETIME, DHCPUtility.inttobytes((int)defLeaseTime));
+		
+		ackMsg.setOptions(ackOptions);
 		return ackMsg.externalize();
 	}
 
@@ -299,8 +322,21 @@ public class DHCPServer {
 		//ip is now unique
 		//offer ip to requesting client
 		
-		DHCPMessage offerMsg = new DHCPMessage();
-		offerMsg.offerMsg(discover.getXid(), discover.getCHAddr(),ip);
+		DHCPMessage offerMsg = new DHCPMessage(discover.externalize());
+		offerMsg.setYIAddr(ip);
+		DHCPOptions offerOptions = new DHCPOptions();
+		offerOptions.setOptionData(DHCPOptions.DHCPMESSAGETYPE, new byte[]{ DHCPOptions.DHCPOFFER});
+		try {
+			offerOptions.setOptionData(DHCPOptions.DHCPSERVERIDENTIFIER, InetAddress.getLocalHost().getAddress());
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		offerOptions.setOptionData(DHCPOptions.DHCPROUTER, router);
+		offerOptions.setOptionData(DHCPOptions.DHCPSUBNETMASK, subnetMask);
+		offerOptions.setOptionData(DHCPOptions.DHCPLEASETIME, DHCPUtility.inttobytes((int)defLeaseTime));
+		
+		offerMsg.setOptions(offerOptions);
 		return offerMsg.externalize();
 	}
 	

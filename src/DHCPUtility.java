@@ -6,10 +6,6 @@ import java.util.BitSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.sun.org.apache.bcel.internal.classfile.JavaClass;
-
-import sun.misc.Regexp;
-
 /**
  * Shared utilities to use between classes
  * @author DjLaivz
@@ -82,8 +78,9 @@ public class DHCPUtility {
 	 * @return the BitSet representation of a byte array
 	 */
 	public static BitSet bytes2Bits(byte[] byteArray) {
-		BitSet bits = new BitSet(8*byteArray.length);
+		BitSet bits = new BitSet(8*byteArray.length); //8*numBytes
 		
+		//for every byte 
 		for (int i=0; i < byteArray.length; i++) {
 			int temp = (byteArray[i] < 0 ? byteArray[i] + 256 : byteArray[i]);
 			for (int j=7; j >= 0; j--) {
@@ -97,9 +94,34 @@ public class DHCPUtility {
 			}
 		} 
 	
-		
 		return bits;
 	}
+	
+	
+	/**
+	 * Converts a BitSet to a ByteArray
+	 * @param bitset - the bitset to convert to byte array
+	 * @return the ByteArray representation of the bitset
+	 */
+	public static byte[] bits2Bytes(BitSet bs) {
+		//possible error in size calculation...
+		byte[] ba = new byte[(int) Math.ceil(bs.size()/16)];
+		
+		System.out.println(bs);
+		System.out.println(ba.length + " bytes representation");
+		//for every byte 
+		for (int i=0; i < ba.length; i++) {
+			BitSet octet = bs.get(i*8, i*8+7+1);
+			byte temp = 0;
+			for (int j = octet.nextSetBit(0); j >=0; j = octet.nextSetBit(j+1)) {
+				temp += Math.pow(2, 7-j);
+			}
+			//System.out.println(temp + " | " + octet.toString() + " " + octet.size()/2);
+			ba[i] = temp;
+		} 
+		return ba;
+	}
+	
 	
 	public static String byteToHex(byte b) {
 		String str = new String(Integer.toHexString(new Integer(b & 0xff)));
@@ -119,10 +141,10 @@ public class DHCPUtility {
 	public static int bytestoint(byte[] ba){
 		int integer = 0;
 		for (int i=0; i < ba.length; i++) {
-			//System.out.printf("byte" + i + ": "+ (ba[i] & 0xff) + " ");
+			System.out.printf("byte" + i + ": "+ (ba[i] & 0xff) + " ");
 			integer += (ba[i] & 0xff) * Math.pow(2, 8*i);
 		}
-		//System.out.println("integer convesion: " + integer);
+		System.out.println("integer convesion: " + integer);
 		assert(integer >= 0);
 		return integer;
 	}
@@ -217,6 +239,14 @@ public class DHCPUtility {
 		} 
 		return baIP;
 	}
+	
+	
+
+	public static String printBitSet(BitSet xid) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
 	
 	
 }
