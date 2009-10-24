@@ -1,12 +1,20 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class DHCPServer {
 	private static final int MAX_BUFFER_SIZE = 1024; // 1024 bytes
-	private int listenPort = 67;//1337;
+	private static int listenPort = 67;
+	private static int clientPort = 68;
+	
+	private static DatagramSocket socket = null;
+	
+	private ArrayList[] options = new ArrayList[4];
 
 	public DHCPServer(int servePort) {
 		listenPort = servePort;
@@ -16,37 +24,75 @@ public class DHCPServer {
 	public DHCPServer() {
 		//System.out.println("Opening UDP Socket On Port: " + listenPort);
 
-		DatagramSocket socket = null;
 		try {
-			
-			socket = new DatagramSocket(listenPort);  // ipaddress? throws socket exception
-
-			byte[] payload = new byte[MAX_BUFFER_SIZE];
-			int length = 6;
-			DatagramPacket p = new DatagramPacket(payload, length);
+			socket = new DatagramSocket(listenPort);
 			//System.out.println("Success! Now listening on port " + listenPort + "...");
 			System.out.println("Listening on port " + listenPort + "...");
-			
-			//server is always listening
-			boolean listening = true;
-			while (listening) {
-				socket.receive(p); //throws i/o exception
-				
-				System.out.println("Connection established from " + p.getAddress());
-			
-				System.out.println("Data Received: " + Arrays.toString(p.getData()));
-			}
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-		catch (IOException e) {
+		} // ipaddress? throws socket exception
+
+
+	}
+	/**
+	 * Broadcasts an offer packet to the subnet
+	 */
+	public void offerPacket() {
+		byte[] offerIP = new byte[4];
+		byte[] cMacAddress = new byte[16];
+		DHCPMessage offer = new DHCPMessage();
+	    byte[] payload = offer.offerMsg(cMacAddress, offerIP);
+	    broadcastPacket(offer.externalize());
+		
+	}
+	
+	public static byte[] receivePacket() {
+		byte[] payload = new byte[MAX_BUFFER_SIZE];
+		int length = MAX_BUFFER_SIZE;
+		DatagramPacket p = new DatagramPacket(payload, length);
+		
+		try {
+			socket.receive(p);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} // throws i/o exception
+
+		System.out.println("Connection established from " + p.getPort()+ p.getAddress());
+		System.out.println("Data Received: " + Arrays.toString(p.getData()));
+		
+		return p.getData();
+
+	}
+	
+	public static void sendPacket(String clientIP, byte[] payload) {
+		assert(payload.length <= MAX_BUFFER_SIZE);
+	
+		try {
+			DatagramPacket p = new DatagramPacket(payload, payload.length, InetAddress.getByName(clientIP), clientPort);
+			System.out.println("Sending data: " + Arrays.toString(p.getData()) + "to :" + p.getAddress().toString());
+		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		
 	}
-
+	
+	public static void broadcastPacket(byte[] payload) {
+		assert(payload.length <= MAX_BUFFER_SIZE);
+	
+		try {
+			String broadcastIP = "255.255.255.255";
+			DatagramPacket p = new DatagramPacket(payload, payload.length, InetAddress.getByName(broadcastIP), clientPort);
+			System.out.println("Broadcasting data: " + Arrays.toString(p.getData()));
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
 	/**
 	 * @param args
 	 */
@@ -57,7 +103,29 @@ public class DHCPServer {
 		} else {
 			server = new DHCPServer();
 		}
+		//server is always listening
+		boolean listening = true;
+		while (listening) {
+			byte[] packet = receivePacket();
+			process(packet);
+		}
+	}
 
+	private static void process(byte[] msg) {
+		DHCPMessage request = new DHCPMessage(msg);
+		byte msgType = request.getOptions().getOptionData(DHCPOptions.DHCPMESSAGETYPE)[0]; 
+		
+		if (request.getOp() == DHCPMessage.DHCPREQUEST) {
+			if (msgType == DHCPOptions.DHCPDISCOVER) {
+				System.out.println("DHCP Discover Message Received");
+			} else if (msgType == DHCPOptions.DHCPREQUEST) {
+				System.out.println("DHCP Request Message Received");
+			} else {
+				System.out.println("Unknown DHCP Message Type. Type: " + msgType);
+			}
+		} else {
+			System.out.println("DHCP Reply Message received, where DHCP Request was expected!");
+		}
 	}
 
 }
