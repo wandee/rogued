@@ -32,7 +32,7 @@ public class DHCPOptions {
 	}
 	
 	public byte[] getOption(int optionID) {
-		return options.get(optionID);
+	   	return options.get(optionID);
 	}
 	
 	public void setOption(int optionID, byte[] option) {
@@ -70,7 +70,7 @@ public class DHCPOptions {
 	public void printOptions () {
 		for (byte[] option : options.values()) {
 			printOption(option[0]);
-		}
+		} 
 	}
 	
 	
@@ -79,6 +79,22 @@ public class DHCPOptions {
 		DHCPOptions test = new DHCPOptions();
 	
 		//test.printOptions();
+	}
+	
+	public void internalize(byte[] options) {
+		
+//		//get size
+//		int totalBytes = options.length;
+//		
+//		//copy bytes
+//		int bytes = 0;
+//		for (byte[] option : this.options.values()) {
+//			for (int i=0; i < option.length; i++) {
+//				options[bytes+i] = option[i];
+//			}
+//			bytes += option.length;
+//		}
+
 	}
 
 	public byte[] externalize() {

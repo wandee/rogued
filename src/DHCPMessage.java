@@ -85,6 +85,10 @@ public class DHCPMessage {
 		this.printMessage();
 	}
 	
+	public DHCPMessage(byte[] msg) {
+		internalize(msg);
+	}
+	
 	public byte[] discoverMsg(byte[] cMacAddress) {
 		op = DHCPREQUEST;
 		hType = ETHERNET10MB; // (0x1) 10Mb Ethernet
@@ -111,6 +115,52 @@ public class DHCPMessage {
 		// DHCP: End of this option field
 
 		return this.externalize();
+	}
+	
+	/**
+	 * Internalises a byte array to this DHCPMessage object.
+	 * @return  ?? not sure yet: a DHCPMessage object with information from a byte array.
+	 */
+	public void internalize(byte[] msg) {
+		int staticSize = 236;
+		int msgLength = msg.length;
+		assert(msgLength >= staticSize);
+		int optionsLength = msg.length - staticSize;
+		
+		op = msg[0];    //1 byte
+		hType = msg[1]; //1 byte
+		hLen = msg[2];  //1 byte
+		hops = msg[3];  //1 byte
+	
+		xid = bytestoint(new byte[]{msg[4],msg[5],msg[6],msg[7]});  	//4 byte int
+		secs = (short)  bytestoint(new byte[]{msg[8],msg[9]});          //2 byte short
+		flags =(short)  bytestoint(new byte[]{msg[10],msg[11]});        //2 byte int
+		// note: only first bit used for flags 
+		// DHCP: 0............... = No Broadcast
+		// DHCP: 1............... = Broadcast
+		assert(flags == 0 || flags == 1);
+
+		//4 bytes
+		cIAddr = new byte[]{msg[12],msg[13],msg[14],msg[15]};  
+		yIAddr = new byte[]{msg[16],msg[17],msg[18],msg[19]}; 
+		sIAddr = new byte[]{msg[20],msg[21],msg[22],msg[23]}; 
+		gIAddr = new byte[]{msg[24],msg[25],msg[26],msg[27]}; 
+		
+		//cIAddr = ;
+		//yIAddr = new byte[4];
+		//sIAddr = new byte[4];
+		//gIAddr = new byte[4];
+		cHAddr = new byte[16];
+		sName = new byte[64];
+		file = new byte[128];
+        
+		for (int i=0; i < 16; i++) cHAddr[i] = msg[28+i];   //16 bytes
+		for (int i=0; i < 64; i++) sName[i] = msg[44+i];    //64 bytes
+		for (int i=0; i < 128; i++) file[i] = msg[108+i];   //128 bytes
+		
+		options = new DHCPOptions();
+
+		this.printMessage();
 	}
 	
 	/**
@@ -304,6 +354,7 @@ public class DHCPMessage {
 		return msg;
 	}
 	
+	//only works for 4 bytes
 	private byte[] inttobytes(int i){
 		byte[] dword = new byte[4];
 		dword[0] = (byte) ((i >> 24) & 0x000000FF);
@@ -311,6 +362,16 @@ public class DHCPMessage {
 		dword[2] = (byte) ((i >> 8) & 0x000000FF);
 		dword[3] = (byte) (i & 0x00FF);
 		return dword;
+	}
+	
+	private int bytestoint(byte[] ba){
+		int integer = 0;
+		for (int i=0; i<ba.length; i++) {
+			System.out.printf("byte" + i + ": "+ ba[i] );
+			integer += ba[i] * Math.pow(2, 8*i);
+		}
+		System.out.println("integer convesion: " + integer);
+		return integer;
 	}
 	
 	private byte[] shorttobytes(short i){
